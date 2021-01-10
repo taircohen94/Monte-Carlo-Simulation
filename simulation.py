@@ -7,6 +7,8 @@ from os import path
 from pandas_datareader import data as pdr
 import json
 import datetime as dt
+import random
+import time
 from scipy.stats import norm
 
 DATA_FILE = 'files/data.csv'
@@ -14,10 +16,10 @@ RETURNS_FILE = 'files/returns.csv'
 
 
 stock_names = {
-    'INTC': 'Intel',
-    'IBM': 'IBM',
-    'DIS': 'Disney',
-    'MCD': 'McDonald\'s'
+    'VMC': 'volcan',
+    'EMR': 'IBM',
+    'CSX': 'Disney',
+    'UNP': 'McDonald\'s'
 }
 
 def stocks_graph(returns, location):
@@ -30,9 +32,9 @@ def stocks_graph(returns, location):
 
 
 def portfolio():
-    portfolio_composition = [('INTC', 0.25), ('IBM', 0.25), ('DIS', 0.25), ('MCD', 0.25)]
+    portfolio_composition = [('VMC', 0.25), ('EMR', 0.25), ('CSX', 0.25), ('UNP', 0.25)]
     tickers = [stock[0] for stock in portfolio_composition]
-    data = pdr.get_data_yahoo(tickers, start="1980-03-17", end=dt.date.today())['Close']
+    data = pdr.get_data_yahoo(tickers, start="1980-03-17", end=dt.date.today())['Adj Close']
     old_data = data.copy(deep=True)
     returns = data.pct_change()
     # stocks_graph(data, 'upper left')
@@ -183,27 +185,70 @@ def generate_market_linked_returns(sent_data, returns):
     except Exception as e:
         print(e)
 
+def str_time_prop(start, end, format, prop):
+    """Get a time at a proportion of a range of two formatted times.
+
+    start and end should be strings specifying times formated in the
+    given format (strftime-style), giving an interval [start, end].
+    prop specifies how a proportion of the interval to be taken after
+    start.  The returned time will be in the specified format.
+    """
+
+    stime = time.mktime(time.strptime(start, format))
+    etime = time.mktime(time.strptime(end, format))
+
+    ptime = stime + prop * (etime - stime)
+
+    return time.strftime(format, time.localtime(ptime))
+
+
+def random_date(start, end, prop):
+    return str_time_prop(start, end, '%Y-%m-%d', prop)
+
+
+def generate_random_slot(data_dropNA):
+    flag = True
+    res = None
+    while flag:
+        try:
+            daterand = random_date("1980-03-17", "2020-03-17", random.random())
+            # print(daterand)
+            res = data_dropNA[daterand:].head(10)
+            if res is not None:
+                # print(data_dropNA[daterand:].head(10))
+                flag = False
+        except:
+            continue
+    return res
+
+
 if __name__ == '__main__':
 
     data, returns = load_data()
     shape = returns.shape[0]
-    returns['Bank'] = np.zeros(shape)
+    # returns['Bank'] = np.zeros(shape)
 
-    generate_market_linked_returns(data, returns)
+    # generate_market_linked_returns(data, returns)
     # print(data)
+    # print(returns)
     #################################################
     #################### Q1 #########################
     #################################################
-    # all_stocks_dict = q_1(data)
+    all_stocks_dict = q_1(data)
     # print(json.dumps(all_stocks_dict, indent=4))
-
-    #################################################
-    #################### Q3 #########################
-    #################################################
-    # stocks_graph(data, 'lower center')
-    q_3(returns)
-
-
-    # data["return_INTC"].corr(data["return_INTC"])
-    # trans = data["return_INTC"].T
-    # print(data["return_INTC"].corr(trans))
+    returns_dropNA = returns.dropna() + 1
+    # print(returns_dropNA)
+#Todo: for loop 100 simulations
+    for i in range(88):
+        dt = generate_random_slot(returns_dropNA)
+        stocks = [[100], [100], [100], [100]] # VMC,EMR, CSX, UNP
+        stokVMC = [100]
+        for index, row in dt.iterrows():
+            stokVMC.append(row['VMC'] * stokVMC[-1])
+            stocks[1].append(row['EMR'] * stocks[1][-1])
+            stocks[2].append(row['CSX'] * stocks[2][-1])
+            stocks[3].append(row['UNP'] * stocks[3][-1])
+        # print(stocks)
+        plt.plot(stokVMC)
+        #Todo: 4 plots
+    plt.show()
