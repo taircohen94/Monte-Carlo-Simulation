@@ -1,8 +1,6 @@
-import yfinance
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import feather
 from os import path
 from pandas_datareader import data as pdr
 import json
@@ -10,17 +8,28 @@ import datetime as dt
 import random
 import time
 from scipy.stats import norm
+import seaborn as sns
+import scipy.stats
 
 DATA_FILE = 'files/data.csv'
 RETURNS_FILE = 'files/returns.csv'
 
 
+def mean_confidence_interval(array_data, confidence=0.90):
+    a = 1.0 * np.array(array_data)
+    n = len(a)
+    m, se = np.mean(a), scipy.stats.sem(a)
+    h = se * scipy.stats.t.ppf((1 + confidence) / 2., n - 1)
+    return m, m - h, m + h
+
+
 stock_names = {
     'VMC': 'volcan',
-    'EMR': 'IBM',
-    'CSX': 'Disney',
-    'UNP': 'McDonald\'s'
+    'EMR': 'Emerson Electric ',
+    'CSX': 'CSX',
+    'UNP': 'Union Pacific'
 }
+
 
 def stocks_graph(returns, location):
     plt.figure(figsize=(14, 7))
@@ -37,6 +46,7 @@ def portfolio():
     data = pdr.get_data_yahoo(tickers, start="1980-03-17", end=dt.date.today())['Adj Close']
     old_data = data.copy(deep=True)
     returns = data.pct_change()
+
     # stocks_graph(data, 'upper left')
     return old_data, returns
 
@@ -59,21 +69,35 @@ def load_data():
     return loaded_data, loaded_returns
 
 
-def q_1(data):
+def q_1(data_to_work: pd.DataFrame):
     stocks_array = []
     # Plot histogram for each Stock and print the description of it
-    for (columnName, columnData) in data.iteritems():
+    for (columnName, columnData) in data_to_work.iteritems():
+        auto_curr = pd.Series(data_to_work[columnName].values)
         columnName = stock_names[str(columnName).replace('return_', '')]
         plot_histograms(columnName, columnData)
         stock_dict = {
             'stock': columnName,
             'mean': columnData.describe()['mean'],
-            'std': columnData.describe()['std']
+            'std': columnData.describe()['std'],
+            'auto_corr': auto_curr.autocorr()
         }
         stocks_array.append(stock_dict)
 
+    print()
     return stocks_array
 
+
+def plot_heatmap_cov(data_to_work):
+    plt.figure(figsize=(10, 10))
+    sns.set(font_scale=1.5)
+    hm = sns.heatmap(data_to_work.cov(),
+                     cbar=True,
+                     annot=True,
+                     square=True,
+                     fmt='.2f')
+    plt.tight_layout()
+    plt.show()
 
 
 def q_3(sent_data):
@@ -101,7 +125,7 @@ def portfolio_annualized_performance(weights, mean_returns, cov_matrix):
 def generate_random_portfolios(num_portfolios, mean_returns, cov_matrix, risk_free_rate):
     # Initialize array of shape 3 x N to store our results,
     # where N is the number of portfolios we're going to simulate
-    results = np.zeros((3,num_portfolios))
+    results = np.zeros((3, num_portfolios))
     # Array to store the weights of each equity
     weight_array = []
     for i in range(num_portfolios):
@@ -115,10 +139,10 @@ def generate_random_portfolios(num_portfolios, mean_returns, cov_matrix, risk_fr
         # the weights, mean returns generated in this function
         portfolio_std_dev, portfolio_return = portfolio_annualized_performance(weights, mean_returns, cov_matrix)
         # Store output
-        results[0,i] = portfolio_std_dev
-        results[1,i] = portfolio_return
+        results[0, i] = portfolio_std_dev
+        results[1, i] = portfolio_return
         # Sharpe ratio
-        results[2,i] = (portfolio_return - risk_free_rate) / portfolio_std_dev
+        results[2, i] = (portfolio_return - risk_free_rate) / portfolio_std_dev
     return results, weight_array
 
 
@@ -174,16 +198,18 @@ def generate_market_linked_returns(sent_data, returns):
 
         stock_linked = dict()
         for column in sent_data.columns:
-            max_precent_under_36 = ((sent_data.loc[sent_data[column] < stock_36_dict[column], column].max()) - 1) / (sent_data[column][0]) * 100
+            max_precent_under_36 = ((sent_data.loc[sent_data[column] < stock_36_dict[column], column].max()) - 1) / (
+            sent_data[column][0]) * 100
             if len(sent_data.loc[sent_data[column] >= stock_36_dict[column]]) > 0:
                 stock_linked[column] = 0.02
             else:
                 stock_linked[column] = max_precent_under_36
 
-        total_returns = (sum([stock_linked[stock] for stock in stock_linked]))/sent_data.shape[0]
+        total_returns = (sum([stock_linked[stock] for stock in stock_linked])) / sent_data.shape[0]
         returns['market_linked'] = np.ones(sent_data.shape[0]) * total_returns
     except Exception as e:
         print(e)
+
 
 def str_time_prop(start, end, format, prop):
     """Get a time at a proportion of a range of two formatted times.
@@ -222,10 +248,84 @@ def generate_random_slot(data_dropNA):
     return res
 
 
-if __name__ == '__main__':
+def generate_880_dataframe(returns_dropNA):
+    df = pd.DataFrame()
+    for i in range(88):
+        df = df.append(generate_random_slot(returns_dropNA))
 
+    return df
+
+
+def q_2(returns_dropNA, Q='2a'):
+    '''
+    Q is one of ['2a', '2b']
+    :param returns_dropNA:
+    :param Q:
+    :return:
+    '''
+    fig, axs = plt.subplots(2, 2)
+    axs[0, 0].set_title('VMC')
+    axs[0, 1].set_title('EMR')
+    axs[1, 0].set_title('CSX')
+    axs[1, 1].set_title('UNP')
+    last_value_precent = []
+    num_of_simulations = 500
+    for i in range(num_of_simulations):
+        hugeDF = generate_880_dataframe(returns_dropNA)
+        stocks = [[1], [1], [1], [1]]  # VMC,EMR, CSX, UNP
+        score_before = 1
+        for index, row in hugeDF.iterrows():
+            stocks[0].append(row['VMC'] * stocks[0][-1])
+            stocks[1].append(row['EMR'] * stocks[1][-1])
+            stocks[2].append(row['CSX'] * stocks[2][-1])
+            stocks[3].append(row['UNP'] * stocks[3][-1])
+
+        if Q == '2b':
+            vmc_stock_value = 1.02 if len([stock for stock in stocks[0] if stock >= 1.36]) > 0 else stocks[0][-1]
+            emr_stock_value = 1.02 if len([stock for stock in stocks[1] if stock >= 1.36]) > 0 else stocks[1][-1]
+            csx_stock_value = 1.02 if len([stock for stock in stocks[2] if stock >= 1.36]) > 0 else stocks[2][-1]
+            unp_stock_value = 1.02 if len([stock for stock in stocks[3] if stock >= 1.36]) > 0 else stocks[3][-1]
+            score_after = (vmc_stock_value + emr_stock_value + csx_stock_value + unp_stock_value) / 4 - 1
+            score_after = 0 if score_after <= 0 else score_after
+        else:
+            score_after = (stocks[0][-1] + stocks[1][-1] + stocks[2][-1] + stocks[3][-1]) / 4 - 1
+
+
+        #
+        stock_scores = {
+            'before': score_before,
+            'after': score_after
+        }
+
+        last_value_precent.append(stock_scores)
+        # plt.plot(score_after)
+    # plt.show()
+    # for stock in last_value_precent:
+    #     print('0% change:', len([value for value in stock if value == 1]) / num_of_simulations)
+    #     print('2% change:', len([value for value in stock if value >= 1.02 and value < 1.021]) / num_of_simulations)
+    #     print('(2%-20%] change:', len([value for value in stock if value > 1.02 and value <= 1.2]) / num_of_simulations)
+    #     print('(20%-36%) change:', len([value for value in stock if value > 1.2 and value < 1.36]) / num_of_simulations)
+    #     m, h_m, h_p = mean_confidence_interval(stock)
+    #     print('(', h_m, '<=', m, '<=', h_p, ')')
+
+    print('0% change:',
+          len([value['after'] for value in last_value_precent if -0.005 <= value['after'] <= 0.005]) / num_of_simulations)
+    print('2% change:', len([value['after'] for value in last_value_precent if
+                             0.015 <= value['after'] < 0.025]) / num_of_simulations)
+    print('(2%-20%] change:', len([value['after'] for value in last_value_precent if
+                                   0.02 < value['after'] <= 0.2]) / num_of_simulations)
+    print('(20%-36%) change:', len([value['after'] for value in last_value_precent if
+                                    0.2 < value['after'] < 0.36]) / num_of_simulations)
+    m, h_m, h_p = mean_confidence_interval([value['after'] for value in last_value_precent])
+    print('(', h_m, '<=', m, '<=', h_p, ')')
+
+    print("######### END ###########")
+
+
+if __name__ == '__main__':
     data, returns = load_data()
     shape = returns.shape[0]
+
     # returns['Bank'] = np.zeros(shape)
 
     # generate_market_linked_returns(data, returns)
@@ -234,21 +334,14 @@ if __name__ == '__main__':
     #################################################
     #################### Q1 #########################
     #################################################
-    all_stocks_dict = q_1(data)
-    # print(json.dumps(all_stocks_dict, indent=4))
+    # all_stocks_dict = q_1(returns * 100)
+    # plot_heatmap_cov(returns * 100)
     returns_dropNA = returns.dropna() + 1
+    # print(json.dumps(all_stocks_dict, indent=4))
     # print(returns_dropNA)
-#Todo: for loop 100 simulations
-    for i in range(88):
-        dt = generate_random_slot(returns_dropNA)
-        stocks = [[100], [100], [100], [100]] # VMC,EMR, CSX, UNP
-        stokVMC = [100]
-        for index, row in dt.iterrows():
-            stokVMC.append(row['VMC'] * stokVMC[-1])
-            stocks[1].append(row['EMR'] * stocks[1][-1])
-            stocks[2].append(row['CSX'] * stocks[2][-1])
-            stocks[3].append(row['UNP'] * stocks[3][-1])
-        # print(stocks)
-        plt.plot(stokVMC)
-        #Todo: 4 plots
-    plt.show()
+
+    for i in range(10):
+        print("######## 2a", str(i) ,"############")
+        q_2(returns_dropNA)
+        print("######## 2b", str(i) ,"############")
+        q_2(returns_dropNA, Q='2b')
