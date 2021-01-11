@@ -100,115 +100,6 @@ def plot_heatmap_cov(data_to_work):
     plt.show()
 
 
-def q_3(sent_data):
-    # Generate Random Simulations
-    mean_returns = sent_data.mean()
-    cov_matrix = sent_data.cov()
-    # Number of portfolios to simulate
-    num_portfolios = 10000
-    # Risk free rate (used for Sharpe ratio below)
-    # anchored on treasury bond rates
-    risk_free_rate = 0.018
-    display_simulated_portfolios(sent_data, mean_returns, cov_matrix, num_portfolios, risk_free_rate)
-
-
-# Define function to calculate returns, volatility
-def portfolio_annualized_performance(weights, mean_returns, cov_matrix):
-    # Given the avg returns, weights of equities calc. the portfolio return
-    returns = np.sum(mean_returns * weights) * 252
-    # Standard deviation of portfolio (using dot product against covariance, weights)
-    # 252 trading days
-    std = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights))) * np.sqrt(252)
-    return std, returns
-
-
-def generate_random_portfolios(num_portfolios, mean_returns, cov_matrix, risk_free_rate):
-    # Initialize array of shape 3 x N to store our results,
-    # where N is the number of portfolios we're going to simulate
-    results = np.zeros((3, num_portfolios))
-    # Array to store the weights of each equity
-    weight_array = []
-    for i in range(num_portfolios):
-        # Randomly assign floats to our 4 equities
-        weights = np.random.random(len(mean_returns))
-        # Convert the randomized floats to percentages (summing to 100)
-        weights /= np.sum(weights)
-        # Add to our portfolio weight array
-        weight_array.append(weights)
-        # Pull the standard deviation, returns from our function above using
-        # the weights, mean returns generated in this function
-        portfolio_std_dev, portfolio_return = portfolio_annualized_performance(weights, mean_returns, cov_matrix)
-        # Store output
-        results[0, i] = portfolio_std_dev
-        results[1, i] = portfolio_return
-        # Sharpe ratio
-        results[2, i] = (portfolio_return - risk_free_rate) / portfolio_std_dev
-    return results, weight_array
-
-
-def display_simulated_portfolios(sent_data, mean_returns, cov_matrix, num_portfolios, risk_free_rate):
-    # pull results, weights from random portfolios
-    results, weights = generate_random_portfolios(num_portfolios, mean_returns, cov_matrix, risk_free_rate)
-
-    # pull the max portfolio Sharpe ratio (3rd element in results array from
-    # generate_random_portfolios function)
-    max_sharpe_idx = np.argmax(results[2])
-
-    # pull the associated standard deviation, annualized return w/ the max Sharpe ratio
-    stdev_portfolio, returns_portfolio = results[0, max_sharpe_idx], results[1, max_sharpe_idx]
-
-    # pull the allocation associated with max Sharpe ratio
-    max_sharpe_allocation = pd.DataFrame(weights[max_sharpe_idx], index=sent_data.columns, columns=['allocation'])
-    max_sharpe_allocation.allocation = [round(i * 100, 2) for i in max_sharpe_allocation.allocation]
-    max_sharpe_allocation = max_sharpe_allocation.T
-
-    print("-" * 100)
-    print("Portfolio at maximum Sharpe Ratio\n")
-    print("--Returns, volatility--\n")
-    print("Annualized Return:", round(returns_portfolio, 2))
-    print("Annualized Volatility:", round(stdev_portfolio, 2))
-
-    print("\n")
-    print("--Allocation at max Sharpe ratio--\n")
-    print(max_sharpe_allocation)
-    print("-" * 100)
-
-    plt.figure(figsize=(16, 9))
-    # x = volatility, y = annualized return, color mapping = sharpe ratio
-    plt.scatter(results[0, :], results[1, :], c=results[2, :], cmap='winter', marker='o', s=10, alpha=0.3)
-    plt.colorbar()
-    # Mark the portfolio w/ max Sharpe ratio
-    plt.scatter(stdev_portfolio, returns_portfolio, marker='x', color='r', s=150, label='Max Sharpe ratio')
-    plt.title('Simulated portfolios illustrating efficient frontier')
-    plt.xlabel('annualized volatility')
-    plt.ylabel('annualized returns')
-    plt.legend(labelspacing=1.2)
-    plt.show()
-
-
-def generate_market_linked_returns(sent_data, returns):
-    # פקדון מובנה
-    # data['linked_market'] = generate_market_linked(data)
-    values_of_linked_returns = []
-    try:
-        stock_36_dict = dict()
-        for stock in sent_data.columns:
-            stock_36_precentage = sent_data[stock][0] * 1.36
-            stock_36_dict[stock] = stock_36_precentage
-
-        stock_linked = dict()
-        for column in sent_data.columns:
-            max_precent_under_36 = ((sent_data.loc[sent_data[column] < stock_36_dict[column], column].max()) - 1) / (
-            sent_data[column][0]) * 100
-            if len(sent_data.loc[sent_data[column] >= stock_36_dict[column]]) > 0:
-                stock_linked[column] = 0.02
-            else:
-                stock_linked[column] = max_precent_under_36
-
-        total_returns = (sum([stock_linked[stock] for stock in stock_linked])) / sent_data.shape[0]
-        returns['market_linked'] = np.ones(sent_data.shape[0]) * total_returns
-    except Exception as e:
-        print(e)
 
 
 def str_time_prop(start, end, format, prop):
@@ -326,11 +217,6 @@ if __name__ == '__main__':
     data, returns = load_data()
     shape = returns.shape[0]
 
-    # returns['Bank'] = np.zeros(shape)
-
-    # generate_market_linked_returns(data, returns)
-    # print(data)
-    # print(returns)
     #################################################
     #################### Q1 #########################
     #################################################
@@ -340,6 +226,9 @@ if __name__ == '__main__':
     # print(json.dumps(all_stocks_dict, indent=4))
     # print(returns_dropNA)
 
+    #################################################
+    #################### Q2 #########################
+    #################################################
     for i in range(1):
         print("######## 2a", str(i), "############")
         q_2(returns_dropNA)
