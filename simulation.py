@@ -162,6 +162,7 @@ def q_2(returns_dropNA, Q='2a'):
     last_value_precent = []
     num_of_simulations = 100
     for i in range(num_of_simulations):
+        print(i)
         hugeDF = generate_880_dataframe(returns_dropNA)
         stocks = [[1], [1], [1], [1]]  # VMC,EMR, CSX, UNP
         score_before = 1
@@ -190,14 +191,12 @@ def q_2(returns_dropNA, Q='2a'):
 
         last_value_precent.append(stock_scores)
         # plt.plot(score_after)
-    # plt.show()
-    # for stock in last_value_precent:
-    #     print('0% change:', len([value for value in stock if value == 1]) / num_of_simulations)
-    #     print('2% change:', len([value for value in stock if value >= 1.02 and value < 1.021]) / num_of_simulations)
-    #     print('(2%-20%] change:', len([value for value in stock if value > 1.02 and value <= 1.2]) / num_of_simulations)
-    #     print('(20%-36%) change:', len([value for value in stock if value > 1.2 and value < 1.36]) / num_of_simulations)
-    #     m, h_m, h_p = mean_confidence_interval(stock)
-    #     print('(', h_m, '<=', m, '<=', h_p, ')')
+        axs[0, 0].plot(stocks[0])
+        axs[0, 1].plot(stocks[1])
+        axs[1, 0].plot(stocks[2])
+        axs[1, 1].plot(stocks[3])
+    plt.show()
+
 
     print('0% change:',
           len([value['after'] for value in last_value_precent if -0.005 <= value['after'] <= 0.005]) / num_of_simulations)
@@ -233,4 +232,4 @@ if __name__ == '__main__':
         print("######## 2a", str(i), "############")
         q_2(returns_dropNA)
         print("######## 2b", str(i), "############")
-        q_2(returns_dropNA, Q='2b')
+        # q_2(returns_dropNA, Q='2b')
