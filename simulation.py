@@ -269,7 +269,7 @@ def q_2(returns_dropNA, Q='2a'):
     axs[1, 0].set_title('CSX')
     axs[1, 1].set_title('UNP')
     last_value_precent = []
-    num_of_simulations = 500
+    num_of_simulations = 100
     for i in range(num_of_simulations):
         hugeDF = generate_880_dataframe(returns_dropNA)
         stocks = [[1], [1], [1], [1]]  # VMC,EMR, CSX, UNP
@@ -319,7 +319,7 @@ def q_2(returns_dropNA, Q='2a'):
     m, h_m, h_p = mean_confidence_interval([value['after'] for value in last_value_precent])
     print('(', h_m, '<=', m, '<=', h_p, ')')
 
-    print("######### END ###########")
+    #print("######### END ###########")
 
 
 if __name__ == '__main__':
@@ -340,8 +340,8 @@ if __name__ == '__main__':
     # print(json.dumps(all_stocks_dict, indent=4))
     # print(returns_dropNA)
 
-    for i in range(10):
-        print("######## 2a", str(i) ,"############")
+    for i in range(1):
+        print("######## 2a", str(i), "############")
         q_2(returns_dropNA)
-        print("######## 2b", str(i) ,"############")
+        print("######## 2b", str(i), "############")
         q_2(returns_dropNA, Q='2b')
