@@ -21,11 +21,11 @@ def portfolio():
 
 if __name__ == '__main__':
     data = portfolio()
-    # print(data)
+    print(data)
 
-    # plt.hist(data["return_INTC"], bins=100)
-    # plt.title('INTC')
-    # plt.show()
+    plt.hist(data["return_INTC"], bins=100)
+    plt.title('INTC')
+    plt.show()
     #
     # plt.hist(data["return_IBM"], bins=100)
     # plt.title('IBM')
